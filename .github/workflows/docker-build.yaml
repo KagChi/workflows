@@ -64,9 +64,13 @@ jobs:
             latest=auto
           images: "ghcr.io/${{ inputs.TARGET_IMAGE_NAME || steps.string.outputs.lowercase }}"
           tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
             type=ref,event=branch
+            type=ref,event=branch,suffix=-${{ steps.timestamp.outputs.timestamp }}
             type=sha,prefix=,suffix=,format=short
-            type=raw,value=${{ steps.tags.outputs.name }},enable=${{ github.event_name == 'release' }}
+            type=sha,prefix=,suffix=,format=long
     
       - name: Build and push
         id: docker_build
