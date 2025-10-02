@@ -13,30 +13,59 @@ on:
         type: boolean
         required: false
         default: false
+      USE_BUN:
+        description: "Use Bun instead of Node.js + pnpm"
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   build:
     runs-on: ${{ inputs.RUNNER }}
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4.0.0
+      - name: Setup Bun
+        if: ${{ inputs.USE_BUN == true }}
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
 
-    - name: Setup Node.js
-      uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4
-      with:
-        node-version-file: .node-version
+      - name: Setup pnpm
+        if: ${{ inputs.USE_BUN != true }}
+        uses: pnpm/action-setup@v4.0.0
 
-    - name: Installing dependencies
-      run: pnpm install --frozen-lockfile
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
-    - name: Lint code
-      if: ${{ inputs.SKIP_LINT != true }}
-      run: pnpm run lint
+      - name: Setup Node.js
+        if: ${{ inputs.USE_BUN != true }}
+        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4
+        with:
+          node-version-file: .node-version
 
-    - name: Build Code
-      run: pnpm run build
+      - name: Installing dependencies (pnpm)
+        if: ${{ inputs.USE_BUN != true }}
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Installing dependencies (bun)
+        if: ${{ inputs.USE_BUN == true }}
+        run: bun install
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lint code
+        if: ${{ inputs.SKIP_LINT != true && inputs.USE_BUN != true }}
+        run: pnpm run lint
+
+      - name: Lint code (bun)
+        if: ${{ inputs.SKIP_LINT != true && inputs.USE_BUN == true }}
+        run: bun run lint
+
+      - name: Build Code
+        if: ${{ inputs.USE_BUN != true }}
+        run: pnpm run build
+
+      - name: Build Code (bun)
+        if: ${{ inputs.USE_BUN == true }}
+        run: bun run build
